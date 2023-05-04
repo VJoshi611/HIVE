@@ -1,0 +1,200 @@
+This is a real time dataset of the ineuron technical consultant team. You have to perform hive analysis on this given dataset.
+Download Dataset 1 - https://drive.google.com/file/d/1WrG-9qv6atP-W3P_-gYln1hHyFKRKMHP/view
+Download Dataset 2 - https://drive.google.com/file/d/1-JIPCZ34dyN6k9CqJa-Y8yxIGq6vTVXU/view
+Note: both files are csv files. 
+------------------------------------------------------------------------------------------
+
+1. Create a schema based on the given dataset
+
+create table agentlogin
+(
+sl_no int,
+Agent string,
+dates string,
+login_time string,
+logout_time string,
+duration string
+)
+row format delimited
+fields terminated by','
+tblproperties("skip.header.line.count"="1"); 
+
+
+create table agentperformance
+(
+sl_no int,
+dates string,
+agent_name string,
+total_chats string,
+avg_response_time string,
+avg_resolution_time string,
+average_rating float,
+total_feedback int
+)
+row format delimited
+fields terminated by ','
+tblproperties("skip.header.line.count"="1"); 
+
+------------------------------------------------------------------------------------------
+2. Dump the data inside the hdfs in the given schema location.
+
+hadoop fs -put AgentLogingReport.csv /tmp
+load data inpath '/tmp/AgentLogingReport.csv' into table agentlogin;
+select * from agentlogin limit 5;
+
+hadoop fs -put AgentPerformance.csv /tmp
+load data inpath '/tmp/AgentPerformance.csv' into table agentperformance;
+select * from agentperformance limit 5;
+
+------------------------------------------------------------------------------------------
+
+3. List of all agents' names. 
+select distinct agent from agentlogin;
+
+4. Find out agent average rating.
+select agent_name, avg(average_rating) from agentperformance group by agent_name;
+
+
+5. Total working days for each agents 
+select Agent, count(dates) from agentlogin group by Agent limit 10;
+OK
+Aditya Shinde   1
+Aditya_iot      9
+Amersh  4
+Ameya Jain      10
+Ankitjha        4
+Anurag Tiwari   37
+Aravind 10
+Ayushi Mishra   18
+Bharath 9
+Boktiar Ahmed Bappy     17
+Time taken: 28.157 seconds, Fetched: 10 row(s)
+
+
+6. Total query that each agent have taken 
+select agent_name, sum(total_chats) from agentperformance group by agent_name limit 10;
+OK
+Abhishek        0.0
+Aditya  0.0
+Aditya Shinde   277.0
+Aditya_iot      231.0
+Amersh  0.0
+Ameya Jain      322.0
+Anirudh         81.0
+Ankit Sharma    0.0
+Ankitjha        5.0
+Anurag Tiwari   4.0
+Time taken: 23.333 seconds, Fetched: 10 row(s)
+
+7. Total Feedback that each agent have received 
+select agent_name, sum(total_feedback) from agentperformance group by agent_name;
+
+
+8. Agent name who have average rating between 3.5 to 4 
+select agent_name from agentperformance where average_rating BETWEEN 3.5 AND 4 limit 10 ;
+
+
+9. Agent name who have rating less than 3.5 
+select agent_name from agentperformance where average_rating < 3.5  limit 5;
+
+
+
+10. Agent name who have rating more than 4.5 
+select agent_name from agentperformance where average_rating > 4.5 ;
+
+11. How many feedback agents have received more than 4.5 average
+select agent_name, avg(total_feedback) as result from agentperformance group by agent_name having result>4.5 limit 10 ;
+
+
+12. average weekly response time for each agent 
+select s.agent_name,avg(col1[0]*3600+col1[1]*60+col1[2])/3600  from(select agent_name,split(average_response_time,':') as col1  
+from agent_performance)s group by s.agent_name;
+
+13. average weekly resolution time for each agents 
+select s.agent_name,avg(col1[0]*3600+col1[1]*60+col1[2])/3600  from(select agent_name,split(average_resolution,':') as col1  
+from agent_performance)s group by s.agent_name;
+
+14. Find the number of chat on which they have received a feedback 
+select agent_name, sum(total_chats), total_feedback from agentperformance where total_feedback > 0 group by agent_name, total_feedback limit 5;
+
+Total MapReduce CPU Time Spent: 17 seconds 280 msec
+OK
+Aditya Shinde   8.0     7
+Aditya Shinde   17.0    8
+Aditya Shinde   67.0    9
+Aditya Shinde   18.0    11
+Aditya Shinde   27.0    14
+Time taken: 24.407 seconds, Fetched: 5 row(s)
+
+
+
+15.Total contribution hour for each and every agents weekly basis. 
+
+select s.agent, sum( col1[0]*3600 + col1[1]*60 + col1[2]) / 3600, s.weekly from( select agent, split(duration,':') as col1 , 
+weekofyear(Date) as weekly from agent_logging_report) s group by s.agent, s.weekly limit 2;
+
+O/P :-
+Aditya Shinde  0.03611111111111111  30
+Aditya_iot     6.095277777777778   29
+
+16. Perform inner join, left join and right join based on the agent column and after joining the table export that data into your local system.
+
+## INNER JOIN
+select a.agent, a.dates, p.total_chats, p.total_feedback from default.agentlogin a JOIN default.agentperformance p on a.agent = p.agent_name limit 5;
+
+Total MapReduce CPU Time Spent: 4 seconds 140 msec
+OK
+Prerna Singh    30-Jul-22       11      9
+Prerna Singh    29-Jul-22       11      9
+Prerna Singh    29-Jul-22       11      9
+Prerna Singh    29-Jul-22       11      9
+Prerna Singh    27-Jul-22       11      9
+Time taken: 30.044 seconds, Fetched: 5 row(s)
+
+
+
+## LEFT JOIN
+select a.agent, a.dates, p.total_chats, p.total_feedback from default.agentlogin a LEFT JOIN   default.agentperformance p on a.agent = p.agent_name limit 5;
+
+Total MapReduce CPU Time Spent: 3 seconds 980 msec
+OK
+Shivananda Sonwane      30-Jul-22       4       1
+Shivananda Sonwane      30-Jul-22       14      9
+Shivananda Sonwane      30-Jul-22       5       4
+Shivananda Sonwane      30-Jul-22       26      18
+Shivananda Sonwane      30-Jul-22       24      14
+Time taken: 28.201 seconds, Fetched: 5 row(s)
+
+## RIGHT JOIN
+select a.agent, a.dates, p.total_chats, p.total_feedback from default.agentlogin a RIGHT JOIN  default.agentperformance p on a.agent = p.agent_name limit 5;
+
+Total MapReduce CPU Time Spent: 3 seconds 940 msec
+OK
+Prerna Singh    30-Jul-22       11      9
+Prerna Singh    29-Jul-22       11      9
+Prerna Singh    29-Jul-22       11      9
+Prerna Singh    29-Jul-22       11      9
+Prerna Singh    27-Jul-22       11      9
+Time taken: 28.662 seconds, Fetched: 5 row(s)
+
+
+
+17. Perform partitioning on top of the agent column and then on top of that perform bucketing for each partitioning.
+
+Create table ALR_partition_Bucket
+(
+sr_no int,
+Dates string,
+Login_time string,
+Logout_time string,
+Duration string
+)partitioned by (Agent string)
+CLUSTERED BY (Dates) sorted by (Dates) INTO 4 BUCKETS
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ',';
+
+set hive.exec.dynamic.partition=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+
+insert into table ALR_partition_Bucket partition(Agent) select sl_no,Dates,Login_time,Logout_time,Duration,Agent from agentlogin;
+
